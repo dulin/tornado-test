@@ -1,8 +1,13 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# -*- mode: python -*-
+
 from setuptools import setup, find_packages
 
 requires = [
     "tornado",
-    "pycryptodomex"
+    "pycryptodomex",
+    "psycopg2"
 ]
 
 VERSION = (0, 0, 1)
@@ -18,6 +23,7 @@ setup(
     packages=find_packages(),
     install_requires=requires,
     include_package_data=True,
+    scripts= ['bin/playground'],
     entry_points={
         "console_scripts": [
             "serve = app:main",

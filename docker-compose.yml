@@ -1,0 +1,22 @@
+version: '2'
+
+services:
+  postgres:
+    container_name: tornado-dev-postgress
+    image: postgres:9.6.10-alpine
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data/pgdata
+    environment:
+      - POSTGRES_USER=tornado-dev
+      - POSTGRES_PASSWORD=tornado-dev
+      - POSTGRES_DB=tornado-dev
+      - PGDATA=/var/lib/postgresql/data/pgdata
+
+  app:
+    build: .
+    links:
+      - postgres
+    ports:
+      - 80:8080
+    command: --port=8080
+
