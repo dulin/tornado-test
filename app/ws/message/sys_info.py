@@ -6,7 +6,7 @@ import time
 import uuid
 
 
-class OutgoingPingMessage():
+class OutgoingSystemInfoMessage():
     """
     Temporarily here to see how this go on debug
     """
@@ -14,13 +14,14 @@ class OutgoingPingMessage():
     def generate(self):
         uid = str(uuid.uuid4())
         t = int(time.time())
+
         data = {
             "id": uid,
             "socket": "sys",
             "type": "rpc",
-            "name": "ping",
+            "name": "getSysInfo",
             "timestamp": t,
-            "request": {},
+            "request": {"GETDATA": "sys_info"},
             "protocol": "2.0"
         }
 
@@ -29,5 +30,5 @@ class OutgoingPingMessage():
             "meta": {},
             "original": data
         }
-
+        print(output)
         return output

@@ -6,24 +6,20 @@ import time
 import uuid
 
 
-class OutgoingPingMessage():
-    """
-    Temporarily here to see how this go on debug
-    """
-
+class OutgoingConfigCheckMessage():
     def generate(self):
         uid = str(uuid.uuid4())
         t = int(time.time())
+        command = 'echo "getConfigCheck"; md5sum /tmp/running.cfg | cut -d" " -f1'
         data = {
             "id": uid,
             "socket": "sys",
             "type": "rpc",
-            "name": "ping",
+            "name": "cmd",
             "timestamp": t,
-            "request": {},
+            "request": command,
             "protocol": "2.0"
         }
-
         output = {
             "payload": json.dumps(data, sort_keys=True, ensure_ascii=False),
             "meta": {},
