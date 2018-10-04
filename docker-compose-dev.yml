@@ -2,7 +2,7 @@ version: '3'
 
 services:
   postgres:
-    container_name: tornado-postgress
+    container_name: tornado-dev-postgress
     image: postgres:9.6.10-alpine
     volumes:
       - ./data/postgres:/var/lib/postgresql/data/pgdata
@@ -13,11 +13,15 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
 
   app:
-    container_name: tornado-app
-    build: .
+    container_name: tornado-dev-app
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    volumes:
+      - .:/usr/src
     links:
       - postgres
     ports:
-      - 80:8080
-    command: --port=8080 --db_host=postgres
+      - 8080:8080
+    command: ./bin/playground --port=8080 --db_host=postgres
 
