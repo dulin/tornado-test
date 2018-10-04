@@ -7,7 +7,7 @@ from tornado import gen
 from tornado.websocket import WebSocketHandler, WebSocketClosedError
 from tornado.queues import Queue
 from .communication_data import ParseMessage
-
+from .message.ping import OutgoingPingMessage
 
 class CommunicationSocketHandler(WebSocketHandler):
     waiters = set()
@@ -33,6 +33,10 @@ class CommunicationSocketHandler(WebSocketHandler):
         debug = ParseMessage(message.decode('utf-8'))
         logging.info("try parse message %s", str(debug.get_all_b64()))
         logging.info("Output: %s", debug.decrypt())
+        out = OutgoingPingMessage()
+        outSend = out.generate()
+        logging.info("send message %r", outSend)
+        self.send(outSend)
 
     def on_pong(self, data):
         """Invoked when the response to a ping frame is received."""
@@ -52,6 +56,7 @@ class CommunicationSocketHandler(WebSocketHandler):
         try:
             self.write_message(dict(value=message))
         except WebSocketClosedError:
+            logging.info("socket closed error")
             self._close()
 
     def _close(self):
@@ -64,7 +69,7 @@ class CommunicationSocketHandler(WebSocketHandler):
 
     @gen.coroutine
     def run(self):
-        logging.info("Run)
+        logging.info("Run")
         while not self.finished:
             message = yield self.messages.get()
             print("New message: " + str(message))
