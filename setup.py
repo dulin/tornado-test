@@ -5,9 +5,11 @@
 from setuptools import setup, find_packages
 
 requires = [
+    "aiopg",
     "tornado",
     "pycryptodomex",
     "psycopg2"
+#    "psycopg2-binary"
 ]
 
 VERSION = (0, 0, 1)
@@ -23,6 +25,7 @@ setup(
     packages=find_packages(),
     install_requires=requires,
     include_package_data=True,
+    test_suite="tests",
     scripts= ['bin/playground'],
     entry_points={
         "console_scripts": [

@@ -134,12 +134,14 @@ class DecryptMessage:
 class EncryptMessage:
     devel_key = base64.b64decode("ypc677QsEsfGepH8B1XAwfS4YF4bywuHYUtks/0Nodo=")
 
-    def __init__(self, message, aes_key=devel_key):
+    def __init__(self, message, aes_key=devel_key, iv=None):
         # similar to Random.get_random_bytes(16)
-        self.iv = uuid.uuid4().bytes
-        raw = message
+        if iv is None:
+            self.iv = uuid.uuid4().bytes
+        else:
+            self.iv = iv
         cipher = AES.new(aes_key, AES.MODE_GCM, self.iv)
-        self.ciphertext, self.auth_tag = cipher.encrypt_and_digest(raw)
+        self.ciphertext, self.auth_tag = cipher.encrypt_and_digest(message)
 
     def get_payload(self):
         payload = str(base64.b64encode(self.iv))

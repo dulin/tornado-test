@@ -11,10 +11,13 @@ from app.ws.communication import CommunicationSocketHandler
 
 
 class Application(tornado.web.Application):
-    def __init__(self):
+    def __init__(self, db):
+        self.db = db
         handlers = [
             (r"/", HelloWorld),
             (r"//", CommunicationSocketHandler),
         ]
-        settings = dict()
+        settings = dict(
+            debug=True
+        )
         super(Application, self).__init__(handlers, **settings)

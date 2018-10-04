@@ -3,14 +3,19 @@
 # -*- mode: python -*-
 
 import logging
+import time
+
 from tornado import gen
-from tornado.websocket import WebSocketHandler, WebSocketClosedError
 from tornado.queues import Queue
-from .communication_data import ParseMessage
-from .message.ping import OutgoingPingMessage
+from tornado.websocket import WebSocketHandler, WebSocketClosedError
+
+from .communication_data import DecryptMessage, EncryptMessage
+from .message import OutgoingPingMessage
+
 
 class CommunicationSocketHandler(WebSocketHandler):
     waiters = set()
+    i = 0
 
     def initialize(self):
         self.messages = Queue()
@@ -29,14 +34,22 @@ class CommunicationSocketHandler(WebSocketHandler):
         self._close()
 
     def on_message(self, message):
-        logging.info("got message %r", message)
-        debug = ParseMessage(message.decode('utf-8'))
+        logging.info("got message \n%r", message)
+        debug = DecryptMessage(message)
         logging.info("try parse message %s", str(debug.get_all_b64()))
-        logging.info("Output: %s", debug.decrypt())
+        logging.info("Output: %r", debug.decrypt())
         out = OutgoingPingMessage()
         outSend = out.generate()
-        logging.info("send message %r", outSend)
-        self.send(outSend)
+        logging.info("send message plain: %s", outSend)
+        enc = EncryptMessage(outSend.get('payload'))
+        payload = str(enc.get_payload())
+        time.sleep(5)
+        self.send_raw(payload)
+
+    def send_raw(self, data):
+        if self.ws_connection is None:
+            raise WebSocketClosedError()
+        return self.ws_connection.write_message(data, binary=False)
 
     def on_pong(self, data):
         """Invoked when the response to a ping frame is received."""
@@ -45,7 +58,6 @@ class CommunicationSocketHandler(WebSocketHandler):
     def on_ping(self, data):
         """Invoked when the a ping frame is received."""
         logging.info("ping received")
-
 
     def parse_message(self, message):
         """"""
@@ -65,7 +77,6 @@ class CommunicationSocketHandler(WebSocketHandler):
     @gen.coroutine
     def submit(self, message):
         yield self.messages.put(message)
-
 
     @gen.coroutine
     def run(self):

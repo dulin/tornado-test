@@ -7,16 +7,17 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql/data/pgdata
     environment:
-      - POSTGRES_USER=tornado-dev
-      - POSTGRES_PASSWORD=tornado-dev
-      - POSTGRES_DB=tornado-dev
+      - POSTGRES_USER=tornado
+      - POSTGRES_PASSWORD=tornado
+      - POSTGRES_DB=tornado
       - PGDATA=/var/lib/postgresql/data/pgdata
 
   app:
+    container_name: tornado-dev-app
     build: .
     links:
       - postgres
     ports:
       - 80:8080
-    command: --port=8080
+    command: --port=8080 --db_host=postgres
 
