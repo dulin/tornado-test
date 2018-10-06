@@ -4,8 +4,8 @@
 
 import base64
 import json
-import string
 import uuid
+from binascii import a2b_base64
 
 from Cryptodome import Random
 from Cryptodome.Cipher import AES
@@ -26,14 +26,15 @@ AES_KEY_LENGTH = 32
 
 
 def b64escape(s):
-    return s.replace('=', "").translate(string.maketrans(b'+/', b'-_'))
+    return s.translate(str.maketrans('+/', '-_')).replace('=', "")
 
 
 def b64unescape(s):
     """
     Reverse base64-url
     """
-    return (s + "=" * ((len(s) * -1) % 4)).translate(string.maketrans(b'-_', b'+/'))
+    o = (s + "=" * ((len(s) * -1) % 4))
+    return o.translate(str.maketrans('-_', '+/')).encode()
 
 
 def decode_base64(data):
@@ -44,10 +45,13 @@ def decode_base64(data):
     :returns: The decoded byte string.
 
     """
-    missing_padding = len(data) % 4
-    if missing_padding != 0:
-        data += b'=' * (4 - missing_padding)
-    return base64.decodestring(data)
+    data = b64unescape(data)
+    try:
+        out = a2b_base64(data)
+    except base64.binascii.Error:
+        return ""
+
+    return out
 
 
 class AESCipher:
@@ -79,9 +83,9 @@ class DecryptMessage:
     devel_key = base64.b64decode("ypc677QsEsfGepH8B1XAwfS4YF4bywuHYUtks/0Nodo=")
 
     def __init__(self, encrypted_message, is_connect_message=False):
-        self.unescaped_message = b64unescape(str(encrypted_message))
-        self.iv = decode_base64(self.unescaped_message[:IV_LEN])
-        self.auth_tag = decode_base64(self.unescaped_message[IV_LEN:AUTH_TAG_END])
+        self.encrypted_message = encrypted_message
+        self.iv = decode_base64(encrypted_message[:IV_LEN])
+        self.auth_tag = decode_base64(encrypted_message[IV_LEN:AUTH_TAG_END])
         self.mac = ""
         self.encrypted = ""
 
@@ -89,22 +93,27 @@ class DecryptMessage:
 
     def load_data(self, is_connect_message=False):
         if is_connect_message:
-            self.mac = ""
-            self.encrypted = decode_base64(self.unescaped_message[MAC_START_LOC:])
+            # only connect message contains mac address
+            self.mac = decode_base64(self.encrypted_message[MAC_START_LOC:MAC_END_LOC])
+            self.encrypted = decode_base64(self.encrypted_message[MIN_MESSAGE_LEN:])
         else:
-            self.mac = decode_base64(self.unescaped_message[MAC_START_LOC:MAC_END_LOC])
-            self.encrypted = decode_base64(self.unescaped_message[MIN_MESSAGE_LEN:])
+            self.mac = ""
+            self.encrypted = decode_base64(self.encrypted_message[MAC_START_LOC:])
 
     def get_all(self):
         return {'iv': self.iv, 'authTag': self.auth_tag, 'mac': self.mac, 'encryptedMessage': self.encrypted}
 
     def get_all_b64(self):
-        return {
+        out = {
             'iv': base64.b64encode(self.iv),
             'authTag': base64.b64encode(self.auth_tag),
-            'mac': base64.b64encode(self.mac),
             'encryptedMessage': base64.b64encode(self.encrypted)
         }
+
+        if self.mac is not "":
+            out.update({'mac': base64.b64encode(self.mac)})
+
+        return out
 
     def get_iv(self):
         return self.iv
@@ -117,16 +126,15 @@ class DecryptMessage:
         return dec.decrypt(self.encrypted, self.iv)
 
     def decrypt(self, aes_key=devel_key):
-        out = self.real_decryption(aes_key)
+        try:
+            out = self.real_decryption(aes_key).decode('utf-8')
+        except UnicodeDecodeError:
+            self.load_data(is_connect_message=True)
+            out = self.real_decryption(aes_key).decode('utf-8')
         try:
             json.loads(out)
         except ValueError:
-            self.load_data(is_connect_message=True)
-            out = self.real_decryption(aes_key)
-            try:
-                json.loads(out)
-            except ValueError:
-                raise Exception('Unable to decrypt message')
+            raise Exception('Unable to decrypt message')
 
         return out
 
@@ -140,11 +148,12 @@ class EncryptMessage:
             self.iv = uuid.uuid4().bytes
         else:
             self.iv = iv
+
         cipher = AES.new(aes_key, AES.MODE_GCM, self.iv)
-        self.ciphertext, self.auth_tag = cipher.encrypt_and_digest(message)
+        self.ciphertext, self.auth_tag = cipher.encrypt_and_digest(message.encode())
 
     def get_payload(self):
-        payload = str(base64.b64encode(self.iv))
-        payload += str(base64.b64encode(self.auth_tag))
-        payload += str(base64.b64encode(self.ciphertext))
-        return b64escape(payload)
+        payload = base64.b64encode(self.iv)
+        payload += base64.b64encode(self.auth_tag)
+        payload += base64.b64encode(self.ciphertext)
+        return b64escape(payload.decode('utf-8'))

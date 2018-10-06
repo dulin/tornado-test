@@ -39,7 +39,7 @@ async def main():
             dbname=options.db_database) as db:
         await maybe_create_tables(db)
         app = Application(db)
-        app.listen(options.port, options.bind_address)
+        app.listen(options.port, options.bind_address, xheaders=True)
         print("Listening on http://%s:%i" % (options.bind_address, options.port))
         shutdown_event = tornado.locks.Event()
         await shutdown_event.wait()
