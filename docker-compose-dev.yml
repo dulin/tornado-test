@@ -14,14 +14,35 @@ services:
 
   app:
     container_name: tornado-dev-app
+    depends_on:
+    - postgres
+    tty: true
     build:
       context: .
-      dockerfile: Dockerfile-dev
+      dockerfile: docker/app/Dockerfile-dev
     volumes:
       - .:/usr/src
     links:
       - postgres
+    command: ./bin/playground --port=8081 --db_host=postgres
+
+  nginx:
+    container_name: tornado-nginx
+    restart: on-failure
+    build: docker/nginx
+    depends_on:
+    - app
+    volumes:
+    - ./data/cert:/cert
+    links:
+    - app
     ports:
-      - 8080:8080
-    command: ./bin/playground --port=8080 --db_host=postgres
+    - 80:80
+    - 443:443
+    environment:
+    - CERT_IP=192.168.99.6
+    - NGINX-UID=1000
+    - HTTP_PORT=80
+    - HTTPS_PORT=443
+    - TORNADO_WS_PORT=8080
 
